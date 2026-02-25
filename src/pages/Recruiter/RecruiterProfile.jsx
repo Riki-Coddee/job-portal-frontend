@@ -27,18 +27,17 @@ import { useAuth } from '../../context/AuthContext';
 
 const RecruiterProfile = () => {
   const { user } = useAuth();
-  console.log("user",user);
-  
   const { 
     profile, 
     company,
     loading, 
-    isRecruiter 
+    isRecruiter,
+    refreshProfile  // Assuming your context has a refresh function
   } = useRecruiter();
 
   // Helper to get base URL from api instance
   const getBaseUrl = () => {
-    return api.defaults.baseURL || 'http://localhost:8000';
+    return api.defaults.baseURL || (process.env.NODE_ENV === 'development' ? 'http://localhost:8000' : '');
   };
 
   // Helper to build full image URL (handles absolute vs relative)
@@ -48,6 +47,10 @@ const RecruiterProfile = () => {
     // If it starts with a slash, append to base URL
     return `${getBaseUrl()}${url}`;
   };
+  
+  // Refs for blob URLs to clean up properly
+  const profilePicPreviewRef = useRef(null);
+  const logoPreviewRef = useRef(null);
   
   const [isEditing, setIsEditing] = useState(false);
   const [recruiterForm, setRecruiterForm] = useState({
@@ -86,6 +89,10 @@ const RecruiterProfile = () => {
     percentage: 0,
     checklist: []
   });
+
+  // State to handle image load errors
+  const [profileImageError, setProfileImageError] = useState(false);
+  const [logoImageError, setLogoImageError] = useState(false);
   
   const logoInputRef = useRef(null);
   const profilePicInputRef = useRef(null);
@@ -106,18 +113,31 @@ const RecruiterProfile = () => {
     { icon: <Wifi size={16} />, label: 'Home Office Stipend' }
   ];
 
+  // Clean up blob URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (profilePicPreviewRef.current) {
+        URL.revokeObjectURL(profilePicPreviewRef.current);
+      }
+      if (logoPreviewRef.current) {
+        URL.revokeObjectURL(logoPreviewRef.current);
+      }
+    };
+  }, []);
+
   // Initialize forms from backend data
   useEffect(() => {
     if (profile) {
-      console.log("profile",profile);
-      
       setRecruiterForm({
         phone_number: profile.phone_number || '',
         designation: profile.designation || '',
         department: profile.department || '',
         bio: profile.bio || '',
-        profile_picture: profile.profile_picture || null
+        profile_picture: null // Don't store the image object here; keep it separate
       });
+
+      // Reset image error states when profile changes
+      setProfileImageError(false);
 
       // Set profile completion from backend
       if (profile.profile_completion) {
@@ -138,7 +158,7 @@ const RecruiterProfile = () => {
         website: company.website || '',
         email: company.email || '',
         phone: company.phone || '',
-        logo: company.logo,
+        logo: null,
         linkedin_url: company.linkedin_url || '',
         twitter_url: company.twitter_url || '',
         facebook_url: company.facebook_url || '',
@@ -147,6 +167,7 @@ const RecruiterProfile = () => {
         culture_description: company.culture_description || '',
         awards: company.awards || []
       });
+      setLogoImageError(false);
     }
   }, [profile, company]);
 
@@ -314,16 +335,29 @@ const RecruiterProfile = () => {
         return;
       }
       
+      // Revoke previous blob URL if exists
       if (isCompany) {
+        if (logoPreviewRef.current) {
+          URL.revokeObjectURL(logoPreviewRef.current);
+        }
+        const previewUrl = URL.createObjectURL(file);
+        logoPreviewRef.current = previewUrl;
         setCompanyForm(prev => ({
           ...prev,
           [field]: file
         }));
+        setLogoImageError(false);
       } else {
+        if (profilePicPreviewRef.current) {
+          URL.revokeObjectURL(profilePicPreviewRef.current);
+        }
+        const previewUrl = URL.createObjectURL(file);
+        profilePicPreviewRef.current = previewUrl;
         setRecruiterForm(prev => ({
           ...prev,
           [field]: file
         }));
+        setProfileImageError(false);
       }
       
       toast.success('Image selected');
@@ -406,18 +440,17 @@ const RecruiterProfile = () => {
         }
       });
 
-      await api.patch('/api/accounts/recruiter/profile/', formData, {
+      const response = await api.patch('/api/accounts/recruiter/profile/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
       
-      toast.success('Profile updated successfully!');
-      setIsEditing(false);
-      window.location.reload(); // Refresh to get updated data
+      // Update local state with returned data if needed
+      return response.data;
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
+      throw error;
     }
   };
 
@@ -438,31 +471,35 @@ const RecruiterProfile = () => {
         }
       });
 
-      await api.patch('/api/accounts/recruiter/company/', formData, {
+      const response = await api.patch('/api/accounts/recruiter/company/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
       
-      toast.success('Company profile updated successfully!');
-      setIsEditing(false);
-      window.location.reload(); // Refresh to get updated data
+      return response.data;
     } catch (error) {
       console.error('Error updating company profile:', error);
-      toast.error('Failed to update company profile');
+      throw error;
     }
   };
 
   // Handle save all changes
   const handleSaveAll = async () => {
     try {
-      // Save recruiter profile
-      await handleSaveRecruiterProfile();
-      
-      // Save company profile
-      await handleSaveCompanyProfile();
+      // Save both profiles in parallel
+      await Promise.all([
+        handleSaveRecruiterProfile(),
+        handleSaveCompanyProfile()
+      ]);
       
       toast.success('All changes saved successfully!');
+      setIsEditing(false);
+      
+      // Refresh profile data via context (if available)
+      if (refreshProfile) {
+        refreshProfile();
+      }
     } catch (error) {
       toast.error('Failed to save changes');
     }
@@ -470,14 +507,16 @@ const RecruiterProfile = () => {
 
   // Handle cancel editing
   const handleCancelEditing = () => {
+    // Reset forms to original data
     if (profile) {
       setRecruiterForm({
         phone_number: profile.phone_number || '',
         designation: profile.designation || '',
         department: profile.department || '',
         bio: profile.bio || '',
-        profile_picture: profile.profile_picture
+        profile_picture: null
       });
+      setProfileImageError(false);
     }
     
     if (company) {
@@ -493,7 +532,7 @@ const RecruiterProfile = () => {
         website: company.website || '',
         email: company.email || '',
         phone: company.phone || '',
-        logo: company.logo,
+        logo: null,
         linkedin_url: company.linkedin_url || '',
         twitter_url: company.twitter_url || '',
         facebook_url: company.facebook_url || '',
@@ -502,6 +541,17 @@ const RecruiterProfile = () => {
         culture_description: company.culture_description || '',
         awards: company.awards || []
       });
+      setLogoImageError(false);
+    }
+    
+    // Revoke any blob URLs
+    if (profilePicPreviewRef.current) {
+      URL.revokeObjectURL(profilePicPreviewRef.current);
+      profilePicPreviewRef.current = null;
+    }
+    if (logoPreviewRef.current) {
+      URL.revokeObjectURL(logoPreviewRef.current);
+      logoPreviewRef.current = null;
     }
     
     setIsEditing(false);
@@ -661,16 +711,17 @@ const RecruiterProfile = () => {
                     {isEditing ? (
                       <>
                         <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-r from-blue-100 to-indigo-100 flex items-center justify-center border-2 border-blue-200">
-                          {recruiterForm.profile_picture instanceof File ? (
+                          {recruiterForm.profile_picture instanceof File && profilePicPreviewRef.current ? (
                             <img
-                              src={URL.createObjectURL(recruiterForm.profile_picture)}
+                              src={profilePicPreviewRef.current}
                               alt="Profile"
                               className="w-full h-full object-cover"
                             />
-                          ) : profile?.profile_picture ? (
+                          ) : profile?.profile_picture && !profileImageError ? (
                             <img
                               src={getFullImageUrl(profile.profile_picture)}
                               alt="Profile"
+                              onError={() => setProfileImageError(true)}
                               className="w-full h-full object-cover"
                             />
                           ) : (
@@ -693,21 +744,12 @@ const RecruiterProfile = () => {
                       </>
                     ) : (
                       <>
-                        {profile?.profile_picture ? (
+                        {profile?.profile_picture && !profileImageError ? (
                           <img
                             src={getFullImageUrl(profile.profile_picture)}
                             alt="Profile"
+                            onError={() => setProfileImageError(true)}
                             className="w-24 h-24 rounded-full object-cover border-2 border-blue-200"
-                            onError={(e) => {
-                              // Fallback if image fails to load
-                              e.target.style.display = 'none';
-                              const parent = e.target.parentElement;
-                              if (parent) {
-                                parent.innerHTML = `<div class="w-24 h-24 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-2 border-blue-200">
-                                  <User size={48} class="text-blue-600" />
-                                </div>`;
-                              }
-                            }}
                           />
                         ) : (
                           <div className="w-24 h-24 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full flex items-center justify-center border-2 border-blue-200">
@@ -724,7 +766,7 @@ const RecruiterProfile = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                     <div className="flex items-center text-gray-900 p-3 bg-gray-50 rounded-lg">
                       <User size={20} className="mr-3 text-gray-400" />
-                      {profile?.first_name} {profile?.last_name}
+                      {user?.first_name} {user?.last_name}
                     </div>
                   </div>
 
@@ -732,7 +774,7 @@ const RecruiterProfile = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                     <div className="flex items-center text-gray-900 p-3 bg-gray-50 rounded-lg">
                       <Mail size={20} className="mr-3 text-gray-400" />
-                      {profile?.email}
+                      {user?.email}
                     </div>
                   </div>
 
@@ -829,16 +871,17 @@ const RecruiterProfile = () => {
                         {isEditing ? (
                           <>
                             <div className="w-24 h-24 rounded-xl overflow-hidden bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl">
-                              {companyForm.logo instanceof File ? (
+                              {companyForm.logo instanceof File && logoPreviewRef.current ? (
                                 <img
-                                  src={URL.createObjectURL(companyForm.logo)}
+                                  src={logoPreviewRef.current}
                                   alt="Company Logo"
                                   className="w-full h-full object-cover"
                                 />
-                              ) : company?.logo ? (
+                              ) : company?.logo && !logoImageError ? (
                                 <img
                                   src={getFullImageUrl(company.logo)}
                                   alt="Company Logo"
+                                  onError={() => setLogoImageError(true)}
                                   className="w-full h-full object-cover"
                                 />
                               ) : (
@@ -861,10 +904,11 @@ const RecruiterProfile = () => {
                           </>
                         ) : (
                           <>
-                            {company?.logo ? (
+                            {company?.logo && !logoImageError ? (
                               <img
                                 src={getFullImageUrl(company.logo)}
                                 alt="Company Logo"
+                                onError={() => setLogoImageError(true)}
                                 className="w-24 h-24 rounded-xl object-cover border-2 border-blue-200"
                               />
                             ) : (
