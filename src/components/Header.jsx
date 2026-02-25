@@ -162,7 +162,7 @@ const Header = () => {
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-50"
+                      className="absolute right-0 mt-2 w-52 bg-white rounded-lg shadow-lg border py-1 z-50"
                     >
                       <div className="px-4 py-3 border-b">
                         <p className="font-semibold text-sm">{profile?.user?.full_name || `${profile?.user?.first_name}' '${profile?.user?.last_name}` || 'User'}</p>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'; // added useCallback
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Filter, TrendingUp, Users, Shield, Zap,
@@ -8,6 +8,7 @@ import {
 import { Link } from 'react-router-dom';
 import JobCard from '../components/JobCard';
 import { useJobs } from '../context/JobContext';
+import { useAuth } from '../context/AuthContext'; // ⬅️ Import auth context
 import api, { publicApi } from '../api';
 
 const Home = () => {
@@ -17,6 +18,8 @@ const Home = () => {
   const [loadingDepartments, setLoadingDepartments] = useState(true);
   const [departmentsError, setDepartmentsError] = useState(null);
 
+  const { user, isAuthenticated } = useAuth(); // ⬅️ Get auth state
+
   const {
     featuredJobs,
     fetchFeaturedJobs,
@@ -25,7 +28,6 @@ const Home = () => {
     error
   } = useJobs();
 
-  // Memoize fetchDepartments to keep it stable
   const fetchDepartments = useCallback(async () => {
     try {
       setLoadingDepartments(true);
@@ -38,14 +40,13 @@ const Home = () => {
     } finally {
       setLoadingDepartments(false);
     }
-  }, []); // no external dependencies
+  }, []);
 
   useEffect(() => {
     fetchFeaturedJobs();
     fetchDepartments();
-  }, [fetchFeaturedJobs, fetchDepartments]); // now includes fetchDepartments
+  }, [fetchFeaturedJobs, fetchDepartments]);
 
-  // Filter featured jobs by selected department
   const filteredFeaturedJobs = useMemo(() => {
     if (selectedDepartment === 'all') return featuredJobs;
     return featuredJobs.filter(job =>
@@ -172,7 +173,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Hero Section */}
+      {/* Hero Section (unchanged) */}
       <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-20">
         <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]"></div>
         <div className="container relative mx-auto px-4">
@@ -236,7 +237,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Departments Section */}
+      {/* Departments Section (unchanged) */}
       <section className="py-16 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-white via-blue-50/30 to-white"></div>
         <div className="container relative mx-auto px-4">
@@ -270,7 +271,6 @@ const Home = () => {
             </div>
           ) : (
             <>
-              {/* Department Filter Tabs */}
               <div className="flex flex-wrap justify-center gap-2 mb-8">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -302,7 +302,6 @@ const Home = () => {
                 ))}
               </div>
 
-              {/* Department Cards Grid */}
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-12">
                 {departments.slice(0, 8).map((department) => (
                   <DepartmentCard
@@ -317,7 +316,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Featured Jobs */}
+      {/* Featured Jobs (unchanged) */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -417,50 +416,97 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600"></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/5"></div>
-        <div className="container relative mx-auto px-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            className="text-white"
-          >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-full mb-6">
-              <Target className="h-10 w-10" />
-            </div>
+      {/* ========== CONDITIONAL CTA SECTION ========== */}
+      {!user ? (
+        // Logged-out users: show sign-up CTA
+        <section className="py-20 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/5"></div>
+          <div className="container relative mx-auto px-4 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              className="text-white"
+            >
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-full mb-6">
+                <Target className="h-10 w-10" />
+              </div>
 
-            <h2 className="text-4xl font-bold mb-6">
-              Ready to <span className="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">Advance Your Career?</span>
-            </h2>
+              <h2 className="text-4xl font-bold mb-6">
+                Ready to <span className="bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">Advance Your Career?</span>
+              </h2>
 
-            <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
-              Join thousands of professionals who found their dream jobs through our platform
-            </p>
+              <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
+                Join thousands of professionals who found their dream jobs through our platform
+              </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/register"
-                className="px-8 py-4 bg-white text-blue-600 rounded-xl hover:bg-gray-50 hover:shadow-2xl transition-all duration-300 font-semibold text-lg hover:scale-[1.02]"
-              >
-                Create Free Account
-              </Link>
-              <Link
-                to="/jobs"
-                className="px-8 py-4 bg-transparent border-2 border-white text-white rounded-xl hover:bg-white hover:text-blue-600 transition-all duration-300 font-semibold text-lg hover:scale-[1.02]"
-              >
-                Browse Jobs Now
-              </Link>
-            </div>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  to="/register"
+                  className="px-8 py-4 bg-white text-blue-600 rounded-xl hover:bg-gray-50 hover:shadow-2xl transition-all duration-300 font-semibold text-lg hover:scale-[1.02]"
+                >
+                  Create Free Account
+                </Link>
+                <Link
+                  to="/jobs"
+                  className="px-8 py-4 bg-transparent border-2 border-white text-white rounded-xl hover:bg-white hover:text-blue-600 transition-all duration-300 font-semibold text-lg hover:scale-[1.02]"
+                >
+                  Browse Jobs Now
+                </Link>
+              </div>
 
-            <p className="mt-8 opacity-75 flex items-center justify-center gap-2">
-              <Shield className="h-4 w-4" />
-              No hidden fees • 100% free for job seekers • Trusted by professionals
-            </p>
-          </motion.div>
-        </div>
-      </section>
+              <p className="mt-8 opacity-75 flex items-center justify-center gap-2">
+                <Shield className="h-4 w-4" />
+                No hidden fees • 100% free for job seekers • Trusted by professionals
+              </p>
+            </motion.div>
+          </div>
+        </section>
+      ) : (
+        // Logged-in users: show a personalized CTA
+        <section className="py-20 relative overflow-hidden bg-gradient-to-r from-emerald-600 to-teal-600">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/5"></div>
+          <div className="container relative mx-auto px-4 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              className="text-white"
+            >
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-sm rounded-full mb-6">
+                <Briefcase className="h-10 w-10" />
+              </div>
+
+              <h2 className="text-4xl font-bold mb-6">
+                Welcome back, {user?.first_name || 'there'}!
+              </h2>
+
+              <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
+                Continue your job search journey. Discover new opportunities that match your profile.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  to="/jobs"
+                  className="px-8 py-4 bg-white text-emerald-600 rounded-xl hover:bg-gray-50 hover:shadow-2xl transition-all duration-300 font-semibold text-lg hover:scale-[1.02]"
+                >
+                  Explore More Jobs
+                </Link>
+                <Link
+                  to={user?.role === 'recruiter' ? '/recruiter/dashboard' : '/job-seeker/dashboard'}
+                  className="px-8 py-4 bg-transparent border-2 border-white text-white rounded-xl hover:bg-white hover:text-emerald-600 transition-all duration-300 font-semibold text-lg hover:scale-[1.02]"
+                >
+                  Go to Dashboard
+                </Link>
+              </div>
+
+              <p className="mt-8 opacity-75 flex items-center justify-center gap-2">
+                <Zap className="h-4 w-4" />
+                New jobs added daily • Personalized recommendations
+              </p>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       <style jsx>{`
         .bg-grid-pattern {

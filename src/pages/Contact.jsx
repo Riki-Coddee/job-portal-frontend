@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Mail, Phone, MapPin, Clock, Send, CheckCircle,
@@ -6,6 +6,7 @@ import {
   Facebook, Twitter, Linkedin, Instagram, Youtube
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import api from '../api';  // Using your configured api instance
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -18,24 +19,27 @@ const Contact = () => {
   
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [faqs, setFaqs] = useState([]);
+  const [faqLoading, setFaqLoading] = useState(true);
+  const [faqError, setFaqError] = useState(null);
 
   const contactInfo = [
     {
       icon: <Mail size={24} />,
       title: 'Email Us',
-      details: ['support@hirepro.com', 'careers@hirepro.com'],
+      details: ['support@hirestream.com', 'careers@hirestream.com'],
       color: 'from-blue-500 to-blue-600'
     },
     {
       icon: <Phone size={24} />,
       title: 'Call Us',
-      details: ['+1 (555) 123-4567', '+1 (555) 987-6543'],
+      details: ['+977 9841879297', '+977 9841331987'],
       color: 'from-green-500 to-green-600'
     },
     {
       icon: <MapPin size={24} />,
       title: 'Visit Us',
-      details: ['123 Tech Street', 'San Francisco, CA 94107'],
+      details: ['Khusibhu, Nayabazar, Kathamndu', 'Jorpati, Bauddha, Kathamndu'],
       color: 'from-purple-500 to-purple-600'
     },
     {
@@ -46,31 +50,34 @@ const Contact = () => {
     },
   ];
 
-  const faqs = [
-    {
-      question: 'How do I create an account?',
-      answer: 'Click the "Register" button in the top right corner and follow the simple steps to create your profile.'
-    },
-    {
-      question: 'Is HirePro free for job seekers?',
-      answer: 'Yes! Job seekers can create profiles, search jobs, and apply for free. Premium features are optional.'
-    },
-    {
-      question: 'How do companies post jobs?',
-      answer: 'Companies need to create a recruiter account, verify their business, and can then post unlimited jobs.'
-    },
-    {
-      question: 'What makes HirePro different?',
-      answer: 'Our AI-powered matching, global reach, and focus on user experience set us apart from other platforms.'
-    },
-  ];
-
   const supportCategories = [
     { value: 'general', label: 'General Inquiry', icon: <MessageSquare size={16} /> },
     { value: 'technical', label: 'Technical Support', icon: <Headphones size={16} /> },
     { value: 'billing', label: 'Billing & Payments', icon: <Globe size={16} /> },
     { value: 'partnership', label: 'Partnership', icon: <Users size={16} /> },
+    { value: 'career', label: 'Career Opportunity', icon: <Mail size={16} /> },
+    { value: 'feedback', label: 'Feedback', icon: <MessageSquare size={16} /> },
   ];
+
+  // Fetch FAQs on mount
+  useEffect(() => {
+    const fetchFaqs = async () => {
+      try {
+        setFaqLoading(true);
+        setFaqError(null);
+        // Using your configured api instance - note the baseURL is already set
+        const response = await api.get('/api/contact/faqs/');
+        setFaqs(response.data);
+      } catch (error) {
+        console.error('Failed to fetch FAQs:', error);
+        setFaqError('Could not load FAQs. Please try again later.');
+        toast.error('Failed to load FAQs');
+      } finally {
+        setFaqLoading(false);
+      }
+    };
+    fetchFaqs();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -80,11 +87,13 @@ const Contact = () => {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Using your configured api instance
+      const response = await api.post('/api/contact/contact/', formData);
+      
       setLoading(false);
       setSubmitted(true);
-      toast.success('Message sent successfully! We\'ll respond within 24 hours.');
+      toast.success(response.data.message || 'Message sent successfully! We\'ll respond within 24 hours.');
       
       // Reset form
       setFormData({
@@ -97,7 +106,20 @@ const Contact = () => {
       
       // Reset submitted state after 5 seconds
       setTimeout(() => setSubmitted(false), 5000);
-    }, 1500);
+    } catch (error) {
+      setLoading(false);
+      console.error('Submission error:', error);
+      
+      // Handle validation errors from backend
+      if (error.response?.data?.errors) {
+        const errors = error.response.data.errors;
+        Object.keys(errors).forEach(key => {
+          toast.error(`${key}: ${errors[key]}`);
+        });
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to send message. Please try again.');
+      }
+    }
   };
 
   return (
@@ -152,7 +174,7 @@ const Contact = () => {
         </div>
       </section>
 
-      {/* Contact Form & Map */}
+      {/* Contact Form & FAQs */}
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12">
@@ -225,11 +247,15 @@ const Contact = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Category
                     </label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {supportCategories.map((cat) => (
                         <label
                           key={cat.value}
-                          className={`flex items-center justify-center gap-2 px-4 py-3 border rounded-lg cursor-pointer transition-all ${formData.category === cat.value ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}`}
+                          className={`flex items-center justify-center gap-2 px-4 py-3 border rounded-lg cursor-pointer transition-all ${
+                            formData.category === cat.value 
+                              ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                              : 'border-gray-300 hover:border-gray-400 text-gray-700'
+                          }`}
                         >
                           <input
                             type="radio"
@@ -279,7 +305,7 @@ const Contact = () => {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:shadow-lg transition-shadow disabled:opacity-70"
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:shadow-lg transition-shadow disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {loading ? (
                       <>
@@ -309,19 +335,24 @@ const Contact = () => {
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
                       <MapPin size={48} className="text-blue-600 mx-auto mb-4" />
-                      <p className="text-gray-700 font-semibold">San Francisco Office</p>
-                      <p className="text-gray-600">123 Tech Street, CA 94107</p>
+                      <p className="text-gray-700 font-semibold">Khusibu, Nayabazar, Kathmandu</p>
+                      <p className="text-gray-600">Pahikwo Sadak, Kathmandu 44600</p>
                     </div>
                   </div>
                 </div>
                 <div className="p-6">
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">Our Headquarters</h3>
                   <p className="text-gray-600 mb-4">
-                    Visit our San Francisco office for meetings, events, or just to say hello!
+                    Visit our Pahikwo Sadak office for meetings, events, or just to say hello!
                   </p>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition">
+                  <a 
+                    href="https://www.google.com/maps?sca_esv=206cd4dd954885db&rlz=1C5CHFA_enNP1063NP1063&sxsrf=ANbL-n4zlnRvvb4SXOb4rlOGzSWdNTaNdw:1772010769675&biw=1440&bih=900&uact=5&gs_lp=Egxnd3Mtd2l6LXNlcnAiEW1hcCBwcmltZSBjb2xsZWdlMgIQJjIGEAAYFhgeMgIQJjILEAAYgAQYhgMYigUyCBAAGIAEGKIEMggQABiABBiiBDIFEAAY7wUyCBAAGIAEGKIESIojUIwHWMYecAN4AZABAJgBywGgAcUXqgEGMC4xNi4xuAEDyAEA-AEBmAIUoAKUGsICChAAGLADGNYEGEfCAg0QABiABBiwAxhDGIoFwgIKECMYgAQYJxiKBcICEBAjGPAFGIAEGCcYyQIYigXCAhAQABiABBixAxhDGIMBGIoFwgILEAAYgAQYsQMYgwHCAgsQLhiABBjRAxjHAcICBRAAGIAEwgIEECMYJ8ICChAjGPAFGCcYyQLCAhAQLhiABBjRAxhDGMcBGIoFwgINEC4YgAQYsQMYQxiKBcICCBAAGIAEGLEDwgITEAAYgAQYsQMYQxiDARjJAxiKBcICDRAAGIAEGLEDGEMYigXCAgsQABiABBiSAxiKBcICChAAGIAEGBQYhwLCAgoQABiABBhDGIoFwgIMEAAYgAQYsQMYChgLwgIIEAAYCBgNGB6YAwCIBgGQBgqSBwYzLjEzLjSgB8ZqsgcGMC4xMy40uAe1GcIHCjItMTIuNi4wLjLIB5cCgAgA&um=1&ie=UTF-8&fb=1&gl=np&sa=X&geocode=KZ8tomfvGOs5MYZ1Nm3I4vPt&daddr=Pahikwo+Sadak,+Kathmandu+44600"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+                  >
                     Get Directions
-                  </button>
+                  </a>
                 </div>
               </motion.div>
 
@@ -333,16 +364,47 @@ const Contact = () => {
                 className="bg-white rounded-2xl shadow-xl p-6"
               >
                 <h3 className="text-xl font-semibold text-gray-900 mb-6">Frequently Asked Questions</h3>
-                <div className="space-y-4">
-                  {faqs.map((faq, index) => (
-                    <div key={index} className="border-b border-gray-200 pb-4 last:border-0">
-                      <h4 className="font-semibold text-gray-900 mb-2">{faq.question}</h4>
-                      <p className="text-gray-600 text-sm">{faq.answer}</p>
-                    </div>
-                  ))}
-                </div>
-                <button className="w-full mt-6 px-4 py-3 border-2 border-blue-600 text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition">
-                  View All FAQs
+                
+                {faqLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading FAQs...</p>
+                  </div>
+                ) : faqError ? (
+                  <div className="text-center py-8">
+                    <p className="text-red-600 mb-4">{faqError}</p>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : faqs.length > 0 ? (
+                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                    {faqs.map((faq) => (
+                      <div key={faq.id} className="border-b border-gray-200 pb-4 last:border-0">
+                        <h4 className="font-semibold text-gray-900 mb-2">{faq.question}</h4>
+                        <p className="text-gray-600 text-sm leading-relaxed">{faq.answer}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No FAQs available at the moment.</p>
+                  </div>
+                )}
+                
+                <button 
+                  onClick={() => {
+                    const faqSection = document.querySelector('.space-y-4');
+                    if (faqSection) {
+                      faqSection.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                  }}
+                  className="w-full mt-6 px-4 py-3 border-2 border-blue-600 text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition"
+                >
+                  Back to Top
                 </button>
               </motion.div>
             </div>
@@ -360,17 +422,19 @@ const Contact = () => {
             </p>
           </div>
           
-          <div className="flex justify-center gap-6 mb-12">
+          <div className="flex flex-wrap justify-center gap-4 md:gap-6 mb-12">
             {[
-              { icon: <Facebook size={24} />, name: 'Facebook', color: 'bg-blue-600' },
-              { icon: <Twitter size={24} />, name: 'Twitter', color: 'bg-sky-500' },
-              { icon: <Linkedin size={24} />, name: 'LinkedIn', color: 'bg-blue-700' },
-              { icon: <Instagram size={24} />, name: 'Instagram', color: 'bg-pink-600' },
-              { icon: <Youtube size={24} />, name: 'YouTube', color: 'bg-red-600' },
+              { icon: <Facebook size={24} />, name: 'Facebook', color: 'bg-blue-600', url: 'https://facebook.com/hirestream' },
+              { icon: <Twitter size={24} />, name: 'Twitter', color: 'bg-sky-500', url: 'https://twitter.com/hirestream' },
+              { icon: <Linkedin size={24} />, name: 'LinkedIn', color: 'bg-blue-700', url: 'https://linkedin.com/company/hirestream' },
+              { icon: <Instagram size={24} />, name: 'Instagram', color: 'bg-pink-600', url: 'https://instagram.com/hirestream' },
+              { icon: <Youtube size={24} />, name: 'YouTube', color: 'bg-red-600', url: 'https://youtube.com/hirestream' },
             ].map((social, index) => (
               <motion.a
                 key={index}
-                href="#"
+                href={social.url}
+                target="_blank"
+                rel="noopener noreferrer"
                 initial={{ opacity: 0, scale: 0.8 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
@@ -384,28 +448,6 @@ const Contact = () => {
             ))}
           </div>
 
-          {/* Newsletter */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="max-w-2xl mx-auto bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl p-8 text-center"
-          >
-            <h3 className="text-2xl font-bold text-white mb-3">Stay Updated</h3>
-            <p className="text-blue-100 mb-6">
-              Subscribe to our newsletter for the latest job trends and career tips
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-white"
-              />
-              <button className="px-6 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-100 transition">
-                Subscribe
-              </button>
-            </div>
-          </motion.div>
         </div>
       </section>
 
@@ -425,13 +467,20 @@ const Contact = () => {
               Our support team is available 24/7 for urgent inquiries
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <button className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg flex items-center gap-2">
+              <a 
+                href="tel:+15551234567"
+                className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg flex items-center gap-2"
+              >
                 <Phone size={20} />
                 Call Now: +1 (555) 123-4567
-              </button>
-              <button className="px-8 py-3 border-2 border-blue-600 text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition">
-                Live Chat Support
-              </button>
+              </a>
+              <a 
+                href="mailto:support@hirestream.com"
+                className="px-8 py-3 border-2 border-blue-600 text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition flex items-center gap-2"
+              >
+                <Mail size={20} />
+                Email Support
+              </a>
             </div>
           </motion.div>
         </div>
