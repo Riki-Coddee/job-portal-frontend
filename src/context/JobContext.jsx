@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import JobService from '../services/jobService';
+import JobService from '../services/JobService.js';
 import api from '../api';
 import { toast } from 'react-toastify';
 
