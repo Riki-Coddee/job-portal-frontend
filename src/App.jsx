@@ -173,7 +173,7 @@ function App() {
       {/* Fallback route */}
       <Route path="*" element={
         <PublicLayout>
-          <NotFound />
+          <Home />
         </PublicLayout>
       } />
     </Routes>
