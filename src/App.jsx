@@ -32,6 +32,7 @@ import RecruiterProfile from './pages/Recruiter/RecruiterProfile.jsx'
 import RecruiterProfileView from './pages/RecruiterProfileView.jsx'
 import Notifications from './pages/Notifications.jsx'
 import Contact from './pages/Contact.jsx'
+import NotFound from './pages/NotFound.jsx'
 
 function App() {
   const { isAuthorized, user, loading, initialized } = useAuth()
@@ -172,7 +173,7 @@ function App() {
       {/* Fallback route */}
       <Route path="*" element={
         <PublicLayout>
-          <Home />
+          <NotFound />
         </PublicLayout>
       } />
     </Routes>
