@@ -10,6 +10,8 @@ const Jobs = () => {
   const [selectedType, setSelectedType] = useState('All');
   const [salaryRange, setSalaryRange] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedExperience, setSelectedExperience] = useState('All');
+  const [selectedDepartment, setSelectedDepartment] = useState('All');
   
   const { 
     jobs, 
@@ -19,9 +21,41 @@ const Jobs = () => {
     fetchJobs
   } = useJobs();
 
-  const jobTypes = ['All', 'Full-time', 'Part-time', 'Contract', 'Remote', 'Internship'];
-  const locations = ['All', 'Remote', 'New York, NY', 'San Francisco, CA', 'Austin, TX', 'Chicago, IL'];
-  const salaryRanges = ['All', '$50,000+', '$80,000+', '$100,000+', '$150,000+'];
+  // Filter options
+  const jobTypes = ['All', 'Full-time', 'Part-time', 'Contract', 'Internship', 'Temporary'];
+  const locations = ['All', 'Remote', 'Hybrid', 'On-site'];
+  const salaryRanges = [
+    'All', 
+    'Negotiable',
+    '0 - 50k', 
+    '50k - 80k', 
+    '80k - 100k', 
+    '100k - 150k', 
+    '150k+'
+  ];
+  const experienceLevels = ['All', 'Entry Level', 'Junior', 'Mid Level', 'Senior', 'Lead', 'Executive'];
+  
+  // Departments from your image
+  const departments = [
+    'All',
+    'Cloud Engineering',
+    'Customer Service',
+    'Database Administration (DBA)',
+    'Data Science & Analytics',
+    'DevOps',
+    'Finance & Accounting',
+    'Human Resources',
+    'Information Technology',
+    'Machine Learning / AI',
+    'Marketing',
+    'Project Management',
+    'Quality Assurance (QA)',
+    'Sales',
+    'Software Engineering',
+    'Supply Chain & Logistics',
+    'Technical Writing',
+    'UX/UI Design'
+  ];
 
   // Fetch all jobs once on component mount
   useEffect(() => {
@@ -49,13 +83,32 @@ const Jobs = () => {
         }
       }
       
-      // Location filter
+      // Location filter - handles both location type and remote policy
       if (selectedLocation !== 'All') {
         if (selectedLocation === 'Remote') {
+          // Remote includes both fully remote and hybrid jobs
           if (job.remote_policy !== 'remote' && job.remote_policy !== 'hybrid') {
             return false;
           }
-        } else if (job.location !== selectedLocation) {
+        } else if (selectedLocation === 'Hybrid') {
+          // Hybrid only
+          if (job.remote_policy !== 'hybrid') {
+            return false;
+          }
+        } else if (selectedLocation === 'On-site') {
+          // On-site only
+          if (job.remote_policy !== 'onsite') {
+            return false;
+          }
+        }
+      }
+      
+      // Department filter
+      if (selectedDepartment !== 'All') {
+        if (job.department_name !== selectedDepartment && 
+            job.department !== selectedDepartment) {
+          // Also check if the department ID matches (if your API uses IDs)
+          // You might need to adjust this based on your data structure
           return false;
         }
       }
@@ -66,8 +119,8 @@ const Jobs = () => {
           'Full-time': 'full_time',
           'Part-time': 'part_time',
           'Contract': 'contract',
-          'Remote': 'remote',
-          'Internship': 'internship'
+          'Internship': 'internship',
+          'Temporary': 'temporary'
         };
         
         if (job.job_type !== jobTypeMap[selectedType]) {
@@ -75,35 +128,83 @@ const Jobs = () => {
         }
       }
       
+      // Experience level filter
+      if (selectedExperience !== 'All') {
+        const expMap = {
+          'Entry Level': 'entry',
+          'Junior': 'junior',
+          'Mid Level': 'mid',
+          'Senior': 'senior',
+          'Lead': 'lead',
+          'Executive': 'executive'
+        };
+        
+        if (job.experience_level !== expMap[selectedExperience]) {
+          return false;
+        }
+      }
+      
       // Salary filter
       if (salaryRange !== 'All') {
-        const minSalary = parseInt(salaryRange.replace(/[^0-9]/g, ''));
-        if (!isNaN(minSalary)) {
+        if (salaryRange === 'Negotiable') {
+          // Jobs with no salary specified or display_salary = false
+          if (job.display_salary === false || (!job.salary_min && !job.salary_max)) {
+            return true;
+          }
+          return false;
+        } else {
+          const [min, max] = salaryRange.replace('k', '').split(' - ').map(s => parseInt(s) * 1000);
           const jobSalary = job.salary_min ? parseInt(job.salary_min) : 0;
-          if (jobSalary < minSalary) {
-            return false;
+          
+          if (salaryRange.includes('+')) {
+            const minSalary = parseInt(salaryRange.replace('k+', '')) * 1000;
+            if (jobSalary < minSalary) {
+              return false;
+            }
+          } else if (min && max) {
+            if (jobSalary < min || jobSalary > max) {
+              return false;
+            }
           }
         }
       }
       
       return true;
     });
-  }, [jobs, searchTerm, selectedLocation, selectedType, salaryRange]);
+  }, [jobs, searchTerm, selectedLocation, selectedType, salaryRange, selectedExperience, selectedDepartment]);
 
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedLocation('All');
     setSelectedType('All');
     setSalaryRange('All');
+    setSelectedExperience('All');
+    setSelectedDepartment('All');
   };
 
   const formatSalary = (job) => {
-    if (job.salary_min && job.salary_max) {
-      return `${job.currency || '$'} ${parseInt(job.salary_min).toLocaleString()} - ${parseInt(job.salary_max).toLocaleString()}`;
-    } else if (job.salary_min) {
-      return `${job.currency || '$'} ${parseInt(job.salary_min).toLocaleString()}+`;
+    // If salary should not be displayed
+    if (job.display_salary === false) {
+      return 'Salary Negotiable';
     }
-    return 'Competitive Salary';
+    
+    if (job.salary_min && job.salary_max) {
+      // Show numbers with currency symbol based on currency field
+      const currencySymbol = job.currency === 'USD' ? '$' : 
+                            job.currency === 'EUR' ? '€' : 
+                            job.currency === 'GBP' ? '£' : 
+                            job.currency === 'NPR' ? 'रु' : 
+                            job.currency || '';
+      return `${currencySymbol} ${parseInt(job.salary_min).toLocaleString()} - ${parseInt(job.salary_max).toLocaleString()}`;
+    } else if (job.salary_min) {
+      const currencySymbol = job.currency === 'USD' ? '$' : 
+                            job.currency === 'EUR' ? '€' : 
+                            job.currency === 'GBP' ? '£' : 
+                            job.currency === 'NPR' ? 'रु' :
+                            job.currency || '';
+      return `${currencySymbol} ${parseInt(job.salary_min).toLocaleString()}+`;
+    }
+    return 'Salary Negotiable';
   };
 
   // Calculate pagination for filtered results
@@ -120,6 +221,15 @@ const Jobs = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const activeFilterCount = [
+    searchTerm,
+    selectedLocation !== 'All' ? selectedLocation : null,
+    selectedType !== 'All' ? selectedType : null,
+    salaryRange !== 'All' ? salaryRange : null,
+    selectedExperience !== 'All' ? selectedExperience : null,
+    selectedDepartment !== 'All' ? selectedDepartment : null,
+  ].filter(Boolean).length;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 py-12">
       <div className="container mx-auto px-4">
@@ -131,7 +241,7 @@ const Jobs = () => {
           <h1 className="text-5xl font-bold bg-gradient-to-r from-primary-600 to-indigo-600 bg-clip-text text-transparent mb-4">
             Find Your Perfect Job
           </h1>
-          <p className="text-gray-600 text-lg">Browse through thousands of job opportunities</p>
+          <p className="text-gray-600 text-lg">Browse through thousands of job opportunities worldwide</p>
         </motion.div>
 
         <div className="mb-8">
@@ -141,7 +251,7 @@ const Jobs = () => {
                 <Search className="ml-3 text-primary-500 absolute left-0" size={20} />
                 <input
                   type="text"
-                  placeholder="Search jobs, companies, or skills..."
+                  placeholder="Search jobs, companies, skills, or keywords..."
                   className="flex-1 p-4 pl-10 outline-none w-full rounded-lg focus:ring-2 focus:ring-primary-200 transition-all"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -157,10 +267,15 @@ const Jobs = () => {
                 type="button"
                 onClick={() => setShowFilters(!showFilters)}
                 disabled={loading}
-                className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-medium flex items-center justify-center disabled:opacity-50 shadow-lg hover:shadow-xl"
+                className="px-8 py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-medium flex items-center justify-center disabled:opacity-50 shadow-lg hover:shadow-xl relative"
               >
                 <Filter size={20} className="mr-2" />
                 Filters
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold">
+                    {activeFilterCount}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -170,7 +285,23 @@ const Jobs = () => {
                 animate={{ opacity: 1, height: 'auto' }}
                 className="mt-6 pt-6 border-t border-gray-200"
               >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Department</label>
+                    <select
+                      className="w-full p-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:opacity-50 transition-all"
+                      value={selectedDepartment}
+                      onChange={(e) => {
+                        setSelectedDepartment(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      disabled={loading}
+                    >
+                      {departments.map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Job Type</label>
                     <select
@@ -178,7 +309,7 @@ const Jobs = () => {
                       value={selectedType}
                       onChange={(e) => {
                         setSelectedType(e.target.value);
-                        setCurrentPage(1); // Reset to first page when filter changes
+                        setCurrentPage(1);
                       }}
                       disabled={loading}
                     >
@@ -200,6 +331,22 @@ const Jobs = () => {
                     >
                       {locations.map(location => (
                         <option key={location} value={location}>{location}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Experience Level</label>
+                    <select
+                      className="w-full p-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 disabled:opacity-50 transition-all"
+                      value={selectedExperience}
+                      onChange={(e) => {
+                        setSelectedExperience(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      disabled={loading}
+                    >
+                      {experienceLevels.map(level => (
+                        <option key={level} value={level}>{level}</option>
                       ))}
                     </select>
                   </div>
@@ -234,14 +381,15 @@ const Jobs = () => {
                     Clear all filters
                   </button>
                   <span className="text-gray-700 font-semibold">
-                    {filteredJobs.length} jobs found
+                    {filteredJobs.length} {filteredJobs.length === 1 ? 'job' : 'jobs'} found
                   </span>
                 </div>
               </motion.div>
             )}
           </div>
 
-          {(searchTerm || selectedLocation !== 'All' || selectedType !== 'All' || salaryRange !== 'All') && (
+          {/* Active filters display */}
+          {activeFilterCount > 0 && (
             <div className="flex flex-wrap gap-2 mb-4">
               {searchTerm && (
                 <span className="px-4 py-2 bg-blue-100 text-primary-700 rounded-full text-sm flex items-center font-medium shadow-sm">
@@ -258,7 +406,22 @@ const Jobs = () => {
                   </button>
                 </span>
               )}
-              {selectedLocation && selectedLocation !== 'All' && (
+              {selectedDepartment !== 'All' && (
+                <span className="px-4 py-2 bg-blue-100 text-primary-700 rounded-full text-sm flex items-center font-medium shadow-sm">
+                  Department: {selectedDepartment}
+                  <button 
+                    onClick={() => {
+                      setSelectedDepartment('All');
+                      setCurrentPage(1);
+                    }} 
+                    className="ml-2 hover:text-blue-900 disabled:opacity-50"
+                    disabled={loading}
+                  >
+                    <X size={14} />
+                  </button>
+                </span>
+              )}
+              {selectedLocation !== 'All' && (
                 <span className="px-4 py-2 bg-blue-100 text-primary-700 rounded-full text-sm flex items-center font-medium shadow-sm">
                   Location: {selectedLocation}
                   <button 
@@ -273,7 +436,7 @@ const Jobs = () => {
                   </button>
                 </span>
               )}
-              {selectedType && selectedType !== 'All' && (
+              {selectedType !== 'All' && (
                 <span className="px-4 py-2 bg-blue-100 text-primary-700 rounded-full text-sm flex items-center font-medium shadow-sm">
                   Type: {selectedType}
                   <button 
@@ -288,7 +451,22 @@ const Jobs = () => {
                   </button>
                 </span>
               )}
-              {salaryRange && salaryRange !== 'All' && (
+              {selectedExperience !== 'All' && (
+                <span className="px-4 py-2 bg-blue-100 text-primary-700 rounded-full text-sm flex items-center font-medium shadow-sm">
+                  Experience: {selectedExperience}
+                  <button 
+                    onClick={() => {
+                      setSelectedExperience('All');
+                      setCurrentPage(1);
+                    }} 
+                    className="ml-2 hover:text-blue-900 disabled:opacity-50"
+                    disabled={loading}
+                  >
+                    <X size={14} />
+                  </button>
+                </span>
+              )}
+              {salaryRange !== 'All' && (
                 <span className="px-4 py-2 bg-blue-100 text-primary-700 rounded-full text-sm flex items-center font-medium shadow-sm">
                   Salary: {salaryRange}
                   <button 
@@ -339,7 +517,8 @@ const Jobs = () => {
                       type: job.job_type === 'full_time' ? 'Full-time' : 
                             job.job_type === 'part_time' ? 'Part-time' :
                             job.job_type === 'contract' ? 'Contract' :
-                            job.job_type === 'internship' ? 'Internship' : 'Temporary',
+                            job.job_type === 'internship' ? 'Internship' : 
+                            job.job_type === 'temporary' ? 'Temporary' : 'Full-time',
                       skills: job.skills || [],
                     }} 
                     index={index} 

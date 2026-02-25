@@ -821,7 +821,7 @@ const PostJob = () => {
               <div className="ml-3">
                 <p className="font-medium text-gray-900">Feature this Job</p>
                 <p className="text-sm text-gray-600">
-                  Highlight your job for better visibility ($99/month)
+                  Highlight your job for better visibility
                 </p>
               </div>
             </div>

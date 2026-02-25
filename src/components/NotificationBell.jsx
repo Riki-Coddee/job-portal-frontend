@@ -201,15 +201,7 @@ const NotificationBell = () => {
                             <p className="text-sm text-gray-600 mt-1">
                               {notification.message}
                             </p>
-                            {notification.action_url && (
-                              <a
-                                href={notification.action_url}
-                                className="mt-2 inline-block text-xs text-blue-600 hover:text-blue-800 font-medium"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                View details →
-                              </a>
-                            )}
+                            
                           </div>
                         </div>
                       </div>

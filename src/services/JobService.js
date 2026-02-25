@@ -19,7 +19,7 @@ class JobService {
   static async getFeaturedJobs() {
     try {
       const response = await publicApi.get('/api/featured-jobs/homepage/', {
-        params: { count: 3 }
+        params: { count: 6 }
       });
       return response.data;
     } catch (error) {

@@ -5,6 +5,10 @@ import {
   Award, TrendingUp, Globe, Heart,
   CheckCircle, Star, Briefcase, Building
 } from 'lucide-react';
+import CEOPhoto from '../assets/images/CEO.jpg';
+import CTOPhoto from '../assets/images/CTO.jpg';
+import HeadOfCommunity from '../assets/images/HeadOfCommunity.jpg';
+import HeadOfProduct from '../assets/images/HeadOfProduct.png';
 
 const About = () => {
   const [activeStat, setActiveStat] = useState(null);
@@ -45,39 +49,63 @@ const About = () => {
 
   const teamMembers = [
     {
-      name: 'Alex Johnson',
+      name: 'Rikesh Shrestha',
       role: 'CEO & Founder',
-      image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300',
+      image: CEOPhoto,  // Fixed: removed JSX brackets
       bio: 'Former HR Director with 15+ years in talent acquisition.'
     },
     {
-      name: 'Sarah Chen',
+      name: 'Sushant Khatri',
       role: 'CTO',
-      image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300',
+      image: CTOPhoto,  // Fixed: removed JSX brackets
       bio: 'Tech visionary with expertise in AI and machine learning.'
     },
     {
-      name: 'Michael Rodriguez',
+      name: 'Shreeyam Rimal',
       role: 'Head of Product',
-      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w-300',
+      image: HeadOfProduct,  // Fixed: removed JSX brackets
       bio: 'Product strategist passionate about user experience.'
     },
     {
-      name: 'Priya Sharma',
+      name: 'Suraj Tamang',
       role: 'Head of Community',
-      image: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300',
+      image: HeadOfCommunity,  // Fixed: was incorrectly using CTOPhoto
       bio: 'Dedicated to building inclusive career communities.'
     },
   ];
 
   const milestones = [
-    { year: '2018', title: 'HirePro Founded', description: 'Started with a vision to revolutionize hiring' },
-    { year: '2019', title: 'AI Matching Launch', description: 'Introduced intelligent job-candidate matching' },
-    { year: '2020', title: 'Global Expansion', description: 'Expanded to 50+ countries worldwide' },
-    { year: '2021', title: 'Mobile App Launch', description: 'Released iOS and Android applications' },
-    { year: '2022', title: '10K Companies', description: 'Reached 10,000 registered companies' },
-    { year: '2023', title: 'Series B Funding', description: 'Raised $50M to accelerate growth' },
-  ];
+  { 
+    year: '2023', 
+    title: 'Idea Conception', 
+    description: 'Founders identified the gap in job matching and started brainstorming solutions.' 
+  },
+  { 
+    year: 'Early 2024', 
+    title: 'MVP Development Begins', 
+    description: 'Started building the core platform with basic job posting and application features.' 
+  },
+  { 
+    year: 'Mid 2024', 
+    title: 'Closed Alpha Launch', 
+    description: 'First version tested with 50 beta users and 10 partner companies.' 
+  },
+  { 
+    year: 'Late 2024', 
+    title: 'Private Beta', 
+    description: 'Expanded to 500 users, gathered feedback, and iterated on features.' 
+  },
+  { 
+    year: 'Early 2025', 
+    title: 'Pre-seed Funding', 
+    description: 'Raised $500K from angel investors to accelerate development.' 
+  },
+  { 
+    year: 'Current', 
+    title: 'Open Beta Launch', 
+    description: 'Platform now live with 2,000+ users and 50+ companies. You\'re using it right now!' 
+  },
+];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -263,7 +291,7 @@ const About = () => {
                 <div className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
                   <div className="relative h-64 overflow-hidden">
                     <img 
-                      src={member.image} 
+                      src={member.image}  // Fixed: removed quotes, using imported variable
                       alt={member.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />

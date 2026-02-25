@@ -59,7 +59,7 @@ export const JobProvider = ({ children }) => {
     setError(null);
     try {
       JobService.setContext();
-      const data = await JobService.getRandomFeaturedJobs(3);
+      const data = await JobService.getRandomFeaturedJobs(6);
       setFeaturedJobs(data);
       return data;
     } catch (err) {

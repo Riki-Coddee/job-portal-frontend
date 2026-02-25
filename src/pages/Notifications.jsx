@@ -432,15 +432,6 @@ const Notifications = () => {
                               <span className="text-xs text-gray-500">
                                 {formatDate(notification.created_at)}
                               </span>
-                              {notification.action_url && (
-                                <a
-                                  href={notification.action_url}
-                                  className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  View details →
-                                </a>
-                              )}
                             </div>
                           </div>
 

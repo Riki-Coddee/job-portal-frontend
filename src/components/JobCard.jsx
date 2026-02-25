@@ -38,7 +38,6 @@ const JobCard = ({ job, index }) => {
               <span>{job.type}</span>
             </div>
             <div className="flex items-center text-gray-600">
-              <DollarSign size={16} className="mr-2 flex-shrink-0" />
               <span>{job.salary || 'Competitive Salary'}</span>
             </div>
             {job.applicants && (
