@@ -766,7 +766,7 @@ const Candidates = () => {
   );
 };
 
-// Candidate Card Component
+// ===================== REDESIGNED CANDIDATE CARD WITH PROFILE PICTURE SUPPORT =====================
 const CandidateCard = ({ 
   application, 
   index, 
@@ -779,175 +779,194 @@ const CandidateCard = ({
   updateApplicationStatus,
   navigate
 }) => {
+  const [showActions, setShowActions] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="bg-white rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden group"
+      className="bg-white rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-200 overflow-hidden"
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
     >
-      {/* Candidate Header */}
-      <div className="p-6">
+      {/* Main Content */}
+      <div className="p-5">
+        {/* Header with Avatar and Name */}
         <div className="flex items-start justify-between">
-          <div className="flex items-start space-x-4">
-            <div className={`h-14 w-14 rounded-full bg-gradient-to-r ${getAvatarColor(application.candidate_name)} flex items-center justify-center text-white font-bold text-xl`}>
-              {application.candidate_name.split(' ').map(n => n[0]).join('')}
+          <div className="flex items-center space-x-3">
+            {/* Avatar - Image or Initials */}
+            <div className="relative h-12 w-12">
+              {application.candidate_profile_picture && !imageError ? (
+                <img 
+                  src={application.candidate_profile_picture} 
+                  alt={application.candidate_name}
+                  className="h-12 w-12 rounded-full object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className={`h-12 w-12 rounded-full bg-gradient-to-r ${getAvatarColor(application.candidate_name)} flex items-center justify-center text-white font-semibold text-lg shadow-sm`}>
+                  {application.candidate_name.split(' ').map(n => n[0]).join('')}
+                </div>
+              )}
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h3 className="font-bold text-gray-900">{application.candidate_name}</h3>
+                <h3 className="font-semibold text-gray-900">{application.candidate_name}</h3>
                 {application.is_favorite && (
-                  <Heart size={16} className="text-red-500 fill-current" />
+                  <Heart size={14} className="text-red-500 fill-current" />
                 )}
               </div>
-              <p className="text-sm text-gray-600 mt-1">{application.position_applied}</p>
-              <div className="flex items-center mt-2 text-sm text-gray-500">
-                <MapPin size={14} className="mr-1" />
-                {application.candidate_location}
-              </div>
+              <p className="text-sm text-gray-600">{application.position_applied}</p>
             </div>
           </div>
           
-          <div className="flex flex-col items-end space-y-2">
-            <button 
-              onClick={() => navigate(`/recruiter/candidates/${application.id}`)}
-              className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-medium rounded-lg hover:from-blue-600 hover:to-blue-700 flex items-center transition-all"
-              title="View Full Profile"
-            >
-              <Eye size={12} className="mr-1" />
-              View Profile
-            </button>
-            
-            <div className="flex items-center space-x-1">
-              <button 
-                onClick={() => toggleFavorite(application.id)}
-                className={`p-2 rounded-lg ${application.is_favorite ? 'text-red-600 hover:bg-red-50' : 'text-gray-600 hover:bg-gray-100'}`}
-                title={application.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
-              >
-                <Heart size={16} className={application.is_favorite ? 'fill-current' : ''} />
-              </button>
-              
-              <button 
-                onClick={() => setEditingApplication(application)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
-              >
-                <MoreVertical size={18} />
-              </button>
-            </div>
-          </div>
+          {/* Status Badge */}
+          <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${getStatusColor(application.status)}`}>
+            {application.status_display}
+          </span>
         </div>
 
-        {/* Status & Score */}
-        <div className="flex items-center justify-between mt-6">
-          <div className="flex items-center space-x-2">
-            <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStatusColor(application.status)}`}>
-              {application.status_display}
-            </span>
-            {application.interview_scheduled && (
-              <span className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded-full">
-                Interview: {new Date(application.interview_scheduled).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center">
-            <Star className="h-4 w-4 text-yellow-500 fill-current" />
-            <span className="ml-1 font-bold text-gray-900">{application.match_score}%</span>
-            <span className="ml-1 text-sm text-gray-500">match</span>
-          </div>
+        {/* Location and Applied Date */}
+        <div className="mt-3 flex items-center text-xs text-gray-500 space-x-4">
+          <span className="flex items-center">
+            <MapPin size={12} className="mr-1" />
+            {application.candidate_location}
+          </span>
+          <span className="flex items-center">
+            <Calendar size={12} className="mr-1" />
+            Applied {application.time_since_applied}
+          </span>
         </div>
 
         {/* Skills */}
-        <div className="mt-4">
-          <div className="flex flex-wrap gap-2">
-            {application.skills && application.skills.slice(0, 3).map((skill, idx) => (
-              <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+        {application.skills && application.skills.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {application.skills.slice(0, 3).map((skill, idx) => (
+              <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full">
                 {typeof skill === 'object' ? skill.name : skill}
               </span>
             ))}
-            {application.skills && application.skills.length > 3 && (
-              <span className="px-3 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
-                +{application.skills.length - 3} more
+            {application.skills.length > 3 && (
+              <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full">
+                +{application.skills.length - 3}
               </span>
             )}
           </div>
+        )}
+
+        {/* Match Score Progress Bar */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-xs mb-1">
+            <span className="text-gray-600">Match score</span>
+            <span className="font-medium text-gray-900">{application.match_score}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-1.5">
+            <div 
+              className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
+              style={{ width: `${application.match_score}%` }}
+            />
+          </div>
         </div>
 
-        {/* Contact Info */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center text-sm text-gray-600">
-              <Mail size={14} className="mr-2" />
-              <span className="truncate">{application.candidate_email}</span>
-            </div>
-            <div className="flex items-center text-sm text-gray-600">
-              <Phone size={14} className="mr-2" />
+        {/* Contact Info (shown on hover) */}
+        <div className={`mt-3 transition-all duration-200 ${showActions ? 'opacity-100 max-h-20' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+          <div className="flex items-center text-xs text-gray-500 space-x-3 pt-2 border-t border-gray-100">
+            <a href={`mailto:${application.candidate_email}`} className="flex items-center hover:text-blue-600 transition-colors">
+              <Mail size={12} className="mr-1" />
+              <span className="truncate max-w-[120px]">{application.candidate_email}</span>
+            </a>
+            <a href={`tel:${application.candidate_phone}`} className="flex items-center hover:text-blue-600 transition-colors">
+              <Phone size={12} className="mr-1" />
               {application.candidate_phone}
-            </div>
-          </div>
-          <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-            <div className="flex items-center">
-              <Calendar size={14} className="mr-2" />
-              Applied {application.time_since_applied}
-            </div>
-            <div className="text-xs">
-              Last active: {application.last_active_display}
-            </div>
+            </a>
           </div>
         </div>
       </div>
 
-      {/* Quick Actions Footer */}
-      <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            {/* Quick Status Update Buttons */}
+      {/* Actions Footer - Redesigned with two rows */}
+      <div className="bg-gray-50 px-5 py-3 border-t border-gray-200">
+        {/* Row 1: Status Quick Buttons */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center space-x-1">
             <button
               onClick={() => updateApplicationStatus(application.id, 'shortlisted')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${application.status === 'shortlisted' ? 'bg-purple-600 text-white' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                application.status === 'shortlisted' 
+                  ? 'bg-purple-600 text-white' 
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+              }`}
             >
               Shortlist
             </button>
-            
             <button
               onClick={() => {
                 setEditingApplication(application);
                 setShowInterviewModal(true);
               }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${application.status === 'interview' ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'}`}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                application.status === 'interview' 
+                  ? 'bg-indigo-600 text-white' 
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+              }`}
             >
               Interview
             </button>
-            
             <button
               onClick={() => updateApplicationStatus(application.id, 'offer')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${application.status === 'offer' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                application.status === 'offer' 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+              }`}
             >
               Offer
             </button>
-            
             <button
               onClick={() => updateApplicationStatus(application.id, 'rejected')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg ${application.status === 'rejected' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}
+              className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
+                application.status === 'rejected' 
+                  ? 'bg-red-600 text-white' 
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+              }`}
             >
               Reject
             </button>
           </div>
-          
+        </div>
+
+        {/* Row 2: View Profile + Icons */}
+        <div className="flex items-center justify-between">
+          {/* Prominent View Profile Button */}
+          <button 
+            onClick={() => navigate(`/recruiter/candidates/${application.id}`)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors flex items-center shadow-sm"
+            title="View full profile"
+          >
+            <Eye size={16} className="mr-2" />
+            View Profile
+          </button>
+
+          {/* Icons */}
           <div className="flex items-center space-x-2">
             <button 
               onClick={() => toggleFavorite(application.id)}
-              className={`p-1.5 rounded-lg ${application.is_favorite ? 'text-red-600 hover:bg-red-50' : 'text-gray-600 hover:bg-gray-100'}`}
-              title={application.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
+              className={`p-1.5 rounded-md transition-colors ${
+                application.is_favorite 
+                  ? 'text-red-600 hover:bg-red-50' 
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200'
+              }`}
+              title={application.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
             >
               <Heart size={16} className={application.is_favorite ? 'fill-current' : ''} />
             </button>
-            
             <button 
-              onClick={() => window.open(`/recruiter/candidates/${application.id}`, '_blank')}
-              className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-lg"
-              title="Open in New Tab"
+              onClick={() => setEditingApplication(application)}
+              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-md transition-colors"
+              title="More options"
             >
-              <ExternalLink size={16} />
+              <MoreVertical size={16} />
             </button>
           </div>
         </div>

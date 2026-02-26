@@ -72,6 +72,7 @@ const CandidateDetail = () => {
   });
   const [notes, setNotes] = useState([]);
   const [interviews, setInterviews] = useState([]);
+  const [imageError, setImageError] = useState(false);
 
   // Helper to get the base URL from the api instance
   const getBaseUrl = () => {
@@ -80,6 +81,11 @@ const CandidateDetail = () => {
 
   useEffect(() => {
     fetchCandidateDetails();
+  }, [id]);
+
+  // Reset image error when candidate ID changes
+  useEffect(() => {
+    setImageError(false);
   }, [id]);
 
   const fetchCandidateDetails = async () => {
@@ -485,11 +491,23 @@ const CandidateDetail = () => {
         
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
           <div className="flex items-start space-x-4">
-            <div className={`h-24 w-24 rounded-full bg-gradient-to-r ${getAvatarColor(candidate.candidate_name)} flex items-center justify-center text-white font-bold text-3xl`}>
-              {candidate.candidate_name?.split(' ').map(n => n[0]).join('') || '?'}
+            {/* ===== UPDATED AVATAR WITH PROFILE PICTURE SUPPORT ===== */}
+            <div className="relative h-24 w-24">
+              {candidate.candidate_profile_picture && !imageError ? (
+                <img
+                  src={candidate.candidate_profile_picture}
+                  alt={candidate.candidate_name}
+                  className="h-24 w-24 rounded-full object-cover border-2 border-gray-200"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className={`h-24 w-24 rounded-full bg-gradient-to-r ${getAvatarColor(candidate.candidate_name)} flex items-center justify-center text-white font-bold text-3xl`}>
+                  {candidate.candidate_name?.split(' ').map(n => n[0]).join('') || '?'}
+                </div>
+              )}
             </div>
             
-            {/* ===== SIMPLIFIED CANDIDATE INFO BLOCK ===== */}
+            {/* Simplified Candidate Info Block */}
             <div className="flex-1">
               <div className="flex items-center space-x-3 mb-2">
                 <h1 className="text-3xl font-bold text-gray-900">{candidate.candidate_name || 'Unknown Candidate'}</h1>
@@ -508,7 +526,7 @@ const CandidateDetail = () => {
             </div>
           </div>
           
-          {/* ===== SIMPLIFIED ACTION BUTTONS ===== */}
+          {/* Simplified Action Buttons */}
           <div className="flex items-center space-x-3">
             {/* Heart (Favorite) */}
             <button
